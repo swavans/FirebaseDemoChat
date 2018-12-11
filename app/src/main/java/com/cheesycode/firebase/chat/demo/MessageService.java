@@ -16,11 +16,11 @@ import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
 public class MessageService extends FirebaseMessagingService {
+
     @Override
     public void onNewToken(String token) {
         Log.d("MESSAGING_TOKEN", "Refreshed token: " + token);
         createNotificationChannel();
-        SendTokenToFirebase(token);
     }
 
     @Override
@@ -52,22 +52,6 @@ public class MessageService extends FirebaseMessagingService {
 
     }
 
-    private void SendTokenToFirebase(String token){
-    }
     private void createNotificationChannel() {
-        // Create the NotificationChannel, but only on API 26+ because
-        // the NotificationChannel class is new and not in the support library
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            CharSequence name = getString(R.string.channel_id);
-            String description = getString(R.string.channel_description);
-            int importance = NotificationManager.IMPORTANCE_DEFAULT;
-            NotificationChannel channel = new NotificationChannel( getString(R.string.channel_id) ,name, importance);
-            channel.setDescription(description);
-
-            // Register the channel with the system; you can't change the importance
-            // or other notification behaviors after this
-            NotificationManager notificationManager = getSystemService(NotificationManager.class);
-            notificationManager.createNotificationChannel(channel);
-        }
     }
 }
