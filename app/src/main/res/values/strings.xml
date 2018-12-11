@@ -1,3 +1,5 @@
 <resources>
-    <string name="app_name">FirebaseChatDemo</string>
+    <string name="app_name" translatable="false">FirebaseChatDemo</string>
+    <string name="channel_id" translatable="false">chat_demo</string>
+    <string name="channel_description" translatable="true">Demo chat notificaties</string>
 </resources>
