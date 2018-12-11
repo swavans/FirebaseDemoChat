@@ -2,6 +2,8 @@ package com.cheesycode.firebase.chat.demo;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.support.v4.app.NotificationCompat;
@@ -31,6 +33,18 @@ public class MessageService extends FirebaseMessagingService {
                 .setContentText(remoteMessage.getData().toString())
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setAutoCancel(true);
+        String message = remoteMessage.getData().get("test").toString();
+
+        Intent pushReceivedIntent = new Intent(getApplicationContext(), PushNotificationReceived.class);
+
+        pushReceivedIntent.putExtra("message", message);
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), 0, pushReceivedIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        mBuilder.setContentIntent(pendingIntent);
+
+
+
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
 
         notificationManager.notify(11, mBuilder.build());

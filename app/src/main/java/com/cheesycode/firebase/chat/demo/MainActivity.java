@@ -14,6 +14,8 @@ import android.widget.Toast;
 import com.firebase.ui.auth.AuthUI;
 import com.firebase.ui.auth.IdpResponse;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -35,7 +37,8 @@ public class MainActivity extends AppCompatActivity {
     private TextInputEditText message;
     private EditText messageHistory;
     private EditText other_user;
-    private String username;
+    private Conversation lastConversation;
+    private String documentId = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,43 +46,33 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         subscribeToTopic();
         createSignInIntent();
-        message = findViewById(R.id.message);
         messageHistory = findViewById(R.id.editText);
         other_user = findViewById(R.id.other_user);
-        other_user.setOnFocusChangeListener((new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View v, boolean hasFocus) {
-                if (!hasFocus) {
-                    GetMessages();
-                }
-            }
-        }));
+        message = findViewById(R.id.message);
     }
 
-    private void GetMessages(){
+    private void GetMessages(String username) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         db.collection("conversations").whereEqualTo("user_one", username).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
             @Override
             public void onComplete(@NonNull Task<QuerySnapshot> task) {
                 if (task.isSuccessful()) {
                     for (QueryDocumentSnapshot document : task.getResult()) {
-                        String user = document.get("user_two").toString();
-                        String other_use = other_user.getText().toString();
-                        if(user.equals(other_use)){
-                            ArrayList<String> messages = (ArrayList<String>) document.get("messages");
-                            for (String m: messages) {
-                                messageHistory.append(m + "\n");
-                            }
+                        ArrayList<String> messages = (ArrayList<String>) document.get("messages");
+                        for (String m : messages) {
+                            messageHistory.append(m + "\n");
                         }
+                        lastConversation = document.toObject(Conversation.class);
+                        documentId = document.getId();
                     }
                 } else {
                     Log.w("Conversation", "Error getting documents.", task.getException());
                 }
             }
-        });;
+        });
     }
 
-    private void subscribeToTopic(){
+    private void subscribeToTopic() {
         FirebaseMessaging.getInstance().subscribeToTopic("test")
                 .addOnCompleteListener(new OnCompleteListener<Void>() {
                     @Override
@@ -94,7 +87,7 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
-    private void createSignInIntent(){
+    private void createSignInIntent() {
         List<AuthUI.IdpConfig> providers = Arrays.asList(
                 new AuthUI.IdpConfig.EmailBuilder().build(),
                 new AuthUI.IdpConfig.GoogleBuilder().build(),
@@ -112,16 +105,26 @@ public class MainActivity extends AppCompatActivity {
                 RC_SIGN_IN);
     }
 
-    public void SendMessage(View v){
-        messageHistory.append( message.getText() + " \n" );
-        SendPushNotification();
+    public void SendMessage(View v) {
+        messageHistory.append(message.getText() + " \n ");
+        lastConversation.messages.add(message.getText().toString());
+
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        db.collection("conversations").document(documentId).update("messages", lastConversation.messages)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        Log.d("Send_Message", "DocumentSnapshot successfully updated!");
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.w("Send_Message", "Error updating document", e);
+                    }
+                });
 
     }
-
-    private void SendPushNotification(){
-
-    }
-
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -134,14 +137,15 @@ public class MainActivity extends AppCompatActivity {
                 //Succesvol ingelogd
                 FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
                 FirebaseMessaging.getInstance().setAutoInitEnabled(true);
-                username = user.getDisplayName();
+                GetMessages(user.getDisplayName());
+                other_user.setText(user.getDisplayName());
             } else {
                 //Inloggen is mislukt
             }
         }
     }
 
-    public void SignOut(){
+    public void SignOut() {
         AuthUI.getInstance()
                 .signOut(this)
                 .addOnCompleteListener(new OnCompleteListener<Void>() {
@@ -151,7 +155,7 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
-    public void DeleteUser(){
+    public void DeleteUser() {
         AuthUI.getInstance()
                 .delete(this)
                 .addOnCompleteListener(new OnCompleteListener<Void>() {
